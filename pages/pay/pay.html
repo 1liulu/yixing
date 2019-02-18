@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="../../static/css/font.css">
+    <link rel="stylesheet" href="../../static/css/weadmin.css">
+    <link rel="stylesheet" href="../../lib/layui/css/layui.css">
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+<div class="section">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-row layui-col-space15">
+                <div class="layui-col-md12">
+                    <div id="prices" class="layui-card" style="height: 125px;">
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card">
+                    <div class="layui-card-header">缴费账单统计
+                        <div class="right" style="margin:1px 10px 0 0">
+                        </div>
+                    </div>
+                    <div class="Training-bottom" style="overflow: auto;width: 100%">
+                        <br/>
+                        <table class="layui-table">
+                            <thead>
+                            <tr>
+                                <th style="width:90px;text-align: center">序号</th>
+                                <th style="text-align: center">金额</th>
+                                <th style="text-align: center">时间</th>
+
+                            </tr>
+                            </thead>
+                            <tbody id="show">
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr/>
+                </div>
+
+            </div>
+            <div id="test1"></div>
+            <hr/>
+        </div>
+    </div>
+
+
+</div>
+<script type="text/javascript" src="../../lib/layui/layui.all.js" charset="utf-8"></script>
+<script src="../../lib/layui/echart.js"></script>
+<script src="../../static/js/jquery-3.3.1.min.js"></script>
+<script src="../../static/js/echarts-liquidfill.js"></script>
+<script type="text/javascript">
+    var url="http://localhost";
+    var token = '';
+    var size = 10;
+    var para = parent.window.location.search;//当前请求的url的参数部分
+    if (para == '') {
+        login()
+    } else {
+        token = para.split("?")[1]
+        load1();
+        load2();
+    }
+
+    //页面上面部分加载数据
+    function load1() {
+        $.ajax({
+            type: 'POST',
+            url: url+'/order/countorder',//发送请求
+            data: {token: token},
+            dataType: "html",
+            success: function (result) {
+                var res = JSON.parse(result);
+                if (res.retCode == 1) {
+                    layer.msg(res.message, function () {
+                        login();
+                    });
+                } else {
+                    $("#prices").empty();
+                    var list = res.message;
+                    initUserList1(list)
+                }
+
+            }
+        });
+    }
+    //页面下面表格加载数据
+    function load2() {
+        $.ajax({
+            type: 'POST',
+            url: url+'/order/page',//发送请求
+            data: {page: 1, size: size, token: token},
+            dataType: "html",
+            success: function (result) {
+                var res = JSON.parse(result);
+                if (res.retCode == 1) {
+                    layer.msg(res.message, function () {
+                        login();
+                    });
+                } else {
+                    $("#show").empty();
+                    var order = res.message.list;
+                    initUserList2(order)
+                    page(res.message.total, size)
+                }
+
+            }
+        });
+    }
+    //返回登录界面
+    function login() {
+        parent.location.href = '../../login.html'
+    };
+
+    //更新缴费统计模板引擎数据
+    function initUserList1(list) {
+        layui.use('laytpl', function () {
+            var temp = price.innerHTML;
+            layui.laytpl(temp).render({list: list}, function (html) {
+                prices.innerHTML += html;
+            });
+        });
+    };
+    //更新缴费列表模板引擎数据
+    function initUserList2(list) {
+        layui.use('laytpl', function () {
+            var temp = demo.innerHTML;
+            layui.laytpl(temp).render({list: list}, function (html) {
+                show.innerHTML += html;
+            });
+        });
+    };
+    //分页插件
+    function page(count, limit) {
+        layui.use('laypage', function () {
+            var laypage = layui.laypage;
+
+            //执行一个laypage实例
+            laypage.render({
+                elem: 'test1', //注意，这里的 test1 是 ID，不用加 # 号
+                count: count,//数据总数，从服务端得到
+                limit: limit,
+                jump: function (obj, first) {
+                    //obj包含了当前分页的所有参数，比如：
+
+                    //首次不执行
+                    if (!first) {
+                        //do something
+                        fenye(obj.curr, obj.limit);
+
+                    }
+                }
+            });
+        });
+    };
+    //点击分页结果
+    function fenye(page, size) {
+        $.ajax({
+            type: 'POST',
+            url: url+'/order/page',//发送请求
+            data: {page: page, size: size, token: token},
+            dataType: "html",
+            success: function (result) {
+                var res = JSON.parse(result);
+                if (res.retCode == 1) {
+                    layer.msg(res.message, function () {
+                        login();
+                    });
+                } else {
+                    $("#show").empty();
+                    var order = res.message.list;
+                    initUserList2(order)
+                }
+            }
+        });
+    };
+    //格式化日期
+    function Format(datetime,fmt) {
+        if (parseInt(datetime)==datetime) {
+            if (datetime.length==10) {
+                datetime=parseInt(datetime)*1000;
+            } else if(datetime.length==13) {
+                datetime=parseInt(datetime);
+            }
+        }
+        datetime=new Date(datetime);
+        var o = {
+            "M+" : datetime.getMonth()+1,                 //月份
+            "d+" : datetime.getDate(),                    //日
+            "h+" : datetime.getHours(),                   //小时
+            "m+" : datetime.getMinutes(),                 //分
+            "s+" : datetime.getSeconds(),                 //秒
+            "q+" : Math.floor((datetime.getMonth()+3)/3), //季度
+            "S"  : datetime.getMilliseconds()             //毫秒
+        };
+        if(/(y+)/.test(fmt))
+            fmt=fmt.replace(RegExp.$1, (datetime.getFullYear()+"").substr(4 - RegExp.$1.length));
+        for(var k in o)
+            if(new RegExp("("+ k +")").test(fmt))
+                fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));
+        return fmt;
+    }
+</script>
+<!--缴费统计模板-->
+<script id="price" type="text/html">
+    <div class="layui-card-body">
+        <div class="layui-row layui-col-space10" style="line-height: 55px">
+            <div class="layui-col-xs12">
+                <div class="layui-col-xs3"
+                     style=" font-size:16px;margin-left:70px;margin-top:10px;">
+                    <a class="layadmin-backlog-body">
+                        <h5>缴费总额</h5>
+                        <p><cite style=" font-size:30px;color:#219d70;">¥{{d.list.countprice}}</cite></p>
+                    </a>
+                </div>
+                <div class="layui-col-xs3"
+                     style=" font-size:16px;margin-left:70px;margin-top:10px;">
+                    <a class="layadmin-backlog-body">
+                        <h5>当月缴费总额</h5>
+                        <p><cite style=" font-size:30px;color:#cf714b;">¥{{d.list.monthprice}}</cite></p>
+                    </a>
+                </div>
+                <div class="layui-col-xs3"
+                     style=" font-size:16px;margin-left:70px;margin-top:10px;">
+                    <a class="layadmin-backlog-body">
+                        <h5>当天缴费总额</h5>
+                        <p><cite style=" font-size:30px;color:#cf714b;">¥{{d.list.todayprice}}</cite></p>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</script>
+<!--缴费列表模板-->
+<script id="demo" type="text/html">
+    {{# layui.each(d.list,function(index,item){ }}
+    <tr>
+        <td style="text-align: center">{{index+1}}</td>
+        <td style="text-align: center">{{item.price}}</td>
+        <td style="text-align: center">{{Format(item.createtime,"yyyy-MM-dd  hh:mm")}}</td>
+
+
+    </tr>
+    {{# }); }}
+</script>
+
+
+</body>
+
+</html>

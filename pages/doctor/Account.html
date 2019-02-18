@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="../../static/css/font.css">
+    <link rel="stylesheet" href="../../static/css/weadmin.css">
+    <style>
+        .weadmin-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow: auto;
+            left: 0;
+            background-color: #f5f5fa;
+        }
+
+        .right {
+            float: right;
+        }
+    </style>
+</head>
+<body>
+<div class="weadmin-body">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-xs12">
+            <div class="layui-card">
+                <div class="layui-card-header">医生账户管理
+                    <div class="right" style="margin:1px 10px 0 0">
+                        <div class="layui-inline">
+                            <input id="name" type="text" name="username" placeholder="请输入医生姓名" autocomplete="off"
+                                   class="layui-input">
+                        </div>
+                        <button id="sosuo" class="layui-btn" lay-submit="" lay-filter="sreach"><i class="layui-icon">&#xe615;</i>
+                        </button>
+                        <button class="layui-btn" onclick="WeAdminEdit('添加','Popup/add.html', 1, 500, 400)"><i
+                                class="layui-icon"></i>添加
+                        </button>
+                    </div>
+                </div>
+                <div id="show">
+
+                </div>
+                <div id="test1"></div>
+                <hr/>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="../../lib/layui/layui.all.js" charset="utf-8"></script>
+<script src="../../static/js/jquery-3.3.1.min.js"></script>
+<script type="text/javascript">
+    var url="http://localhost";
+    var name = '';
+    var token = '';
+    var size = 10;
+    var para = parent.window.location.search;//当前请求的url的参数部分
+    if (para == '') {
+        login()
+    } else {
+        token = para.split("?")[1]
+        load();
+    }
+
+    //更新模板引擎数据
+    function initUserList(list) {
+        layui.use('laytpl', function () {
+            var temp = demo.innerHTML;
+            layui.laytpl(temp).render({list: list}, function (html) {
+                show.innerHTML += html;
+            });
+        });
+    };
+
+    //返回登录界面
+    function login() {
+        parent.location.href = '../../login.html'
+    };
+
+    //页面加载数据
+    function load() {
+        $.ajax({
+            type: 'POST',
+            url: url+'/doctor/doctorfinall',//发送请求
+            data: {page: 1, size: size, token: token, name: name},
+            dataType: "html",
+            success: function (result) {
+                var res = JSON.parse(result);
+                if (res.retCode == 1) {
+                    layer.msg(res.message, function () {
+                        login();
+                    });
+                } else {
+                    $("#show").empty();
+                    var users = res.message.list;
+                    initUserList(users)
+                    page(res.message.total, size)
+                }
+
+            }
+        });
+    }
+
+    //搜索
+    $("#sosuo").click(function () {
+        name = $("#name").val();
+        load();
+    });
+
+    //点击分页结果
+    function fenye(page, size, name) {
+        $.ajax({
+            type: 'POST',
+            url: url+'/doctor/doctorfinall',//发送请求
+            data: {page: page, size: size, token: token, name: name},
+            dataType: "html",
+            success: function (result) {
+                var res = JSON.parse(result);
+                if (res.retCode == 1) {
+                    layer.msg(res.message, function () {
+                        login();
+                    });
+                } else {
+                    $("#show").empty();
+                    var users = res.message.list;
+                    initUserList(users)
+                }
+            }
+        });
+    };
+
+    //分页插件
+    function page(count, limit) {
+        layui.use('laypage', function () {
+            var laypage = layui.laypage;
+
+            //执行一个laypage实例
+            laypage.render({
+                elem: 'test1', //注意，这里的 test1 是 ID，不用加 # 号
+                count: count,//数据总数，从服务端得到
+                limit: limit,
+                jump: function (obj, first) {
+                    //obj包含了当前分页的所有参数，比如：
+
+                    //首次不执行
+                    if (!first) {
+                        //do something
+                        fenye(obj.curr, obj.limit, name);
+
+                    }
+                }
+            });
+        });
+    };
+    function deletes(id) {
+        $.ajax({
+            type: 'POST',
+            url: url+'/doctor/deleteDactor',//发送请求
+            data: {id: id, token: token},
+            dataType: "html",
+            success: function (result) {
+                var res = JSON.parse(result);
+                if (res.retCode == 1) {
+                    layer.msg(res.message, function () {
+                        login();
+                    });
+                } else {
+                    layer.msg(res.message, function () {
+                        load();
+                    });
+                }
+            }
+        });
+    } ;
+</script>
+<script src="js/list.js"></script>
+<script id="demo" type="text/html">
+    <div class="Training-bottom" style="overflow: auto;width: 100%">
+        <table class="layui-table">
+            <thead>
+            <tr>
+                <th style="width:43px;text-align: center">序号</th>
+                <th style="text-align: center">姓名</th>
+                <th style="text-align: center">账号</th>
+
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{# layui.each(d.list,function(index,item){ }}
+            <tr>
+                <td style="text-align: center">{{index+1}}</td>
+                <td style="text-align: center">{{item.name}}</td>
+                <td style="text-align: center">{{item.phone}}</td>
+
+                <td class="td-manage">
+                    <a onclick="WeAdminEdit('修改','Popup/update.html?{{item.id}}', 1, 500, 400)"
+                       class="layui-btn layui-btn-normal layui-btn-xs" href="javascript:;"
+                       title="启用">详情</a>
+                    <a class="layui-btn layui-btn-normal layui-btn-xs" onclick="deletes('{{item.id}}')" href="javascript:;"
+                       title="启用">删除</a>
+                </td>
+            </tr>
+            {{# }); }}
+            </tbody>
+        </table>
+    </div>
+
+</script>
+</body>
+</html>
